@@ -1,0 +1,2 @@
+"""Traphaco Legal AI application."""
+

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Traphaco CNC | Pháp luật</title>
+  <style>
+    :root{font-family:Arial,sans-serif;color:#152238;background:#f4f7f9}body{margin:0}.shell{max-width:1180px;margin:auto;padding:28px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px}.top h1{font-size:24px;margin:0}.top p{margin:5px 0 0;color:#546474}.token{display:flex;gap:8px}.token input{padding:9px;min-width:260px}.token button,button{background:#006c4f;color:white;border:0;border-radius:6px;padding:10px 14px;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}.card,.panel{background:white;border:1px solid #dce5e9;border-radius:10px;padding:18px}.number{font-size:30px;font-weight:bold;color:#006c4f}.label{color:#546474;margin-top:6px}.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px}.panel h2{font-size:17px;margin:0 0 14px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #e7eef1;font-size:14px}th{color:#546474}.alert{border-left:4px solid #d08500;padding:10px;background:#fffbf0;margin:8px 0;font-size:14px}.error{color:#b42318;font-size:14px}@media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.token input{min-width:0;width:220px}}
+  </style>
+</head>
+<body><main class="shell">
+  <section class="top"><div><h1>Traphaco CNC · Quản lý văn bản pháp luật</h1><p>Kho tài liệu nội bộ · kết luận hiệu lực cần Pháp chế xác minh</p></div><div class="token"><input id="token" type="password" placeholder="Mã truy cập quản trị"><button onclick="load()">Mở dữ liệu</button></div></section>
+  <p id="message" class="error"></p>
+  <section class="cards"><div class="card"><div id="total" class="number">—</div><div class="label">Tổng văn bản</div></div><div class="card"><div id="active" class="number">—</div><div class="label">Còn hiệu lực</div></div><div class="card"><div id="pending" class="number">—</div><div class="label">Chờ review</div></div><div class="card"><div id="soon" class="number">—</div><div class="label">Sắp có hiệu lực</div></div></section>
+  <section class="grid"><article class="panel"><h2>Danh mục văn bản</h2><table><thead><tr><th>Số hiệu</th><th>Trích yếu</th><th>Hiệu lực</th><th>Trạng thái</th></tr></thead><tbody id="documents"><tr><td colspan="4">Nhập mã truy cập để xem dữ liệu.</td></tr></tbody></table></article><aside class="panel"><h2>Cảnh báo</h2><div id="alerts">Chưa có dữ liệu.</div></aside></section>
+</main><script>
+async function api(path){const token=document.getElementById('token').value;const response=await fetch(path,{headers:{Authorization:'Bearer '+token}});if(!response.ok)throw new Error(response.status===401?'Mã truy cập không hợp lệ':'Không tải được dữ liệu');return response.json()}
+function cell(v){return String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+async function load(){try{document.getElementById('message').textContent='';const [dash,docs]=await Promise.all([api('/api/dashboard'),api('/api/documents')]);const t=dash.totals;for(const [id,key] of [['total','total_documents'],['active','active_documents'],['pending','pending_reviews'],['soon','effective_soon']])document.getElementById(id).textContent=t[key];document.getElementById('documents').innerHTML=docs.length?docs.map(d=>`<tr><td>${cell(d.reference_number||d.internal_code)}</td><td>${cell(d.title)}</td><td>${cell(d.effective_on)}</td><td>${cell(d.legal_status)}</td></tr>`).join(''):'<tr><td colspan="4">Chưa có văn bản.</td></tr>';document.getElementById('alerts').innerHTML=dash.alerts.length?dash.alerts.map(a=>`<div class="alert"><strong>${cell(a.severity)}</strong><br>${cell(a.message)}</div>`).join(''):'Chưa có cảnh báo.'}catch(error){document.getElementById('message').textContent=error.message}}
+</script></body></html>
+

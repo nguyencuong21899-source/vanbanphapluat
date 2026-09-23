@@ -1,0 +1,68 @@
+name: traphaco-legal-ai
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.4
+    restart: unless-stopped
+    volumes:
+      - ./qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6333/healthz >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DOCUMENT_ROOT: /data/documents
+    volumes:
+      - ./data/documents:/data/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8088:8080"
+    networks: [internal]
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker"]
+    env_file: .env
+    environment:
+      DOCUMENT_ROOT: /data/documents
+    volumes:
+      - ./data/documents:/data/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
