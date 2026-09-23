@@ -1,0 +1,18 @@
+services:
+  qdrant:
+    healthcheck:
+      test: ["CMD-SHELL", "true"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "18080:80"
+    networks: [internal]
+
