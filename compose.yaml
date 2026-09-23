@@ -44,8 +44,14 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:8088:8080"
+    networks: [internal]
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
     networks: [internal]
 
   worker:
@@ -65,4 +71,3 @@ services:
 networks:
   internal:
     driver: bridge
-
