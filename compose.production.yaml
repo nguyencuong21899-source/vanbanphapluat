@@ -1,0 +1,8 @@
+services:
+  api:
+    ports: !reset []
+
+  frontend:
+    ports: !reset
+      - "18080:80"
+
