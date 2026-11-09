@@ -3,12 +3,13 @@ from __future__ import annotations
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 LegalStatus = Literal["DRAFT", "PENDING_EFFECT", "ACTIVE", "PARTIALLY_REPEALED", "REPEALED", "SUSPENDED", "UNVERIFIED"]
 
 
 class DocumentCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     internal_code: str = Field(min_length=3, max_length=100)
     title: str = Field(min_length=3, max_length=1000)
     document_type: str = Field(min_length=2, max_length=100)
@@ -17,6 +18,7 @@ class DocumentCreate(BaseModel):
     issued_on: date | None = None
     effective_on: date | None = None
     expires_on: date | None = None
+    comment_deadline: date | None = None
     legal_status: LegalStatus = "UNVERIFIED"
     applicability: str = Field(default="UNVERIFIED", max_length=100)
     primary_domain: str | None = Field(default=None, max_length=200)

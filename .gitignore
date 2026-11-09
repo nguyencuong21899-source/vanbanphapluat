@@ -8,4 +8,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 node_modules/
+frontend/dist/
+.test-deps/
 
