@@ -66,8 +66,8 @@ iframe { display: block; border: 1px solid #dce8e1; width: 100%; height: min(68v
 .login { width: min(94vw, 460px); margin: 8vh auto; background: white; border: 1px solid #dce8e1; padding: 1.6rem; border-radius: 1rem; }
 .login .brand { margin-bottom: 1.4rem; }
 @media (max-width: 740px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { gap: .7rem; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { gap: .7rem; min-width: 0; }
   .sidebar nav { display: flex; overflow: auto; }
   .sidebar nav button { white-space: nowrap; }
   .profile { display: flex; align-items: center; flex-wrap: wrap; }
