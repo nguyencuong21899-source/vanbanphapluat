@@ -37,13 +37,48 @@ def send_mail(task, remaining):
         smtp.send_message(message)
 
 
+def reminder_offsets():
+    offsets = sorted({int(value.strip()) for value in os.getenv("REMINDER_DAYS", "7,3,1,0").split(",")})
+    if any(value < 0 or value > 365 for value in offsets):
+        raise ValueError("REMINDER_DAYS phải từ 0 đến 365")
+    return offsets
+
+
+def record_document_reminders(today=None):
+    today = today or datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+    offsets = reminder_offsets()
+    with connection() as conn:
+        conn.execute("""
+            WITH dates AS (
+                SELECT d.id, d.title, event.kind, event.due, event.alert_type, event.label,
+                       event.due - %(today)s::date AS remaining
+                FROM documents d CROSS JOIN LATERAL (
+                    VALUES
+                        ('comment', CASE WHEN d.legal_status='DRAFT' THEN d.comment_deadline END,
+                         'REVIEW_REQUIRED', 'Hạn góp ý'),
+                        ('effective', CASE WHEN d.legal_status IN ('PENDING_EFFECT','ACTIVE','UNVERIFIED') THEN d.effective_on END,
+                         'EFFECTIVE_SOON', 'Mốc hiệu lực đã ghi'),
+                        ('expiry', CASE WHEN d.legal_status IN ('PENDING_EFFECT','ACTIVE','PARTIALLY_REPEALED','UNVERIFIED') THEN d.expires_on END,
+                         'REVIEW_REQUIRED', 'Mốc hết hiệu lực cần đối chiếu')
+                ) AS event(kind, due, alert_type, label)
+                WHERE d.archived_at IS NULL
+            )
+            INSERT INTO alerts (document_id, alert_type, severity, message, reminder_key)
+            SELECT id, alert_type, CASE WHEN remaining <= 1 THEN 'HIGH' ELSE 'MEDIUM' END,
+                   label || ' ' || to_char(due,'DD/MM/YYYY') || ' · ' ||
+                       CASE WHEN remaining=0 THEN 'Hôm nay' ELSE 'Nhắc trước ' || remaining || ' ngày' END ||
+                       ' · ' || title,
+                   concat_ws(':', id, kind, due, remaining)
+            FROM dates WHERE remaining = ANY(%(offsets)s)
+            ON CONFLICT (reminder_key) DO NOTHING
+        """, {"today": today, "offsets": offsets})
+
+
 def send_reminders():
     if not all(os.getenv(key) for key in ("SMTP_HOST", "SMTP_FROM", "APP_BASE_URL")):
         return
     today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
-    offsets = sorted({int(value.strip()) for value in os.getenv("REMINDER_DAYS", "7,3,1,0").split(",")})
-    if any(value < 0 or value > 365 for value in offsets):
-        raise ValueError("REMINDER_DAYS phải từ 0 đến 365")
+    offsets = reminder_offsets()
     with connection() as conn:
         candidates = conn.execute("""SELECT p.id FROM implementation_plans p
             WHERE p.status IN ('OPEN','IN_PROGRESS') AND (p.internal_deadline-%s::date)=ANY(%s)
@@ -77,6 +112,10 @@ def send_reminders():
 def main():
     migrate()
     while True:
+        try:
+            record_document_reminders()
+        except Exception:
+            logger.exception("Không tạo được thông báo mốc văn bản")
         try:
             send_reminders()
         except Exception:

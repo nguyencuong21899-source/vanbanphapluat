@@ -10,6 +10,8 @@ Hệ thống nội bộ giám sát văn bản pháp luật và quản lý tuân 
 4. Muốn phân tích AI, mở **AI phân tích**, chọn văn bản có tệp và xác nhận nội dung được phép gửi tới Gemini. Kết quả là đề xuất cần kiểm tra. PDF scan cần OCR trước khi tải lên. DOCX xem dưới dạng văn bản, có thể tải bản gốc để xem định dạng.
 5. Công việc có hạn nội bộ. Khi SMTP được cấu hình, worker kiểm tra mỗi 5 phút và gửi theo các mốc `REMINDER_DAYS`. Xem kết quả ở **Công việc và nhắc hạn**. Trạng thái đang gửi hoặc thất bại cần đối chiếu với máy chủ email. Worker giữ một lần gửi cho mỗi công việc, ngày hạn và mốc nhắc để hạn chế gửi trùng.
 
+Với dự thảo nhận từ cổng cơ quan, thư mời hoặc Zalo, vào **Văn bản dự thảo → Thêm dự thảo**, nhập hạn góp ý nếu đã biết, rồi mở bản vừa lưu để đính kèm tài liệu. Mục **Thông báo** báo khi có bản ghi mới và nhắc các mốc góp ý, hiệu lực hoặc hết hiệu lực đã nhập theo `REMINDER_DAYS`. Nhắc mốc hiển thị trong ứng dụng và liên kết đến văn bản. Trạng thái hiệu lực do người phụ trách xác minh và cập nhật.
+
 Danh mục chung dành cho người dùng đã đăng nhập. Kho SOP hạn chế theo phòng ban, theo dõi nguồn tự động, AI góp ý dự thảo và Microsoft 365 thuộc giai đoạn sau.
 
 ## Chạy bằng Docker Compose

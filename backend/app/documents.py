@@ -58,7 +58,8 @@ def editable_fields(conn, payload: DocumentCreate, actor: dict, document_id=None
                 raise HTTPException(404, "Không tìm thấy văn bản")
             data.update(previous)
         else:
-            data.update(legal_status="UNVERIFIED", applicability="UNVERIFIED")
+            data.update(legal_status="DRAFT" if payload.legal_status == "DRAFT" else "UNVERIFIED",
+                        applicability="UNVERIFIED")
     if data["source_url"]:
         conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (data["source_url"],))
         exists = conn.execute(
@@ -78,8 +79,9 @@ def create_document(payload: DocumentCreate, actor: dict = Depends(editors)):
             placeholders = ", ".join(f"%({key})s" for key in FIELDS)
             doc = conn.execute(f"INSERT INTO documents ({', '.join(FIELDS)}) VALUES ({placeholders}) RETURNING {PUBLIC}", data).fetchone()
             audit(conn, actor, "DOCUMENT_CREATED", "document", doc["id"], {"fields": payload.model_dump(mode="json")})
+            label = "Dự thảo mới: " if doc["legal_status"] == "DRAFT" else "Văn bản mới: "
             conn.execute("INSERT INTO alerts (document_id,alert_type,severity,message) VALUES (%s,'NEW_DOCUMENT','LOW',%s)",
-                         (doc["id"], "Văn bản mới: " + doc["title"]))
+                         (doc["id"], label + doc["title"]))
             return doc
     except UniqueViolation as exc:
         raise HTTPException(409, "Mã nội bộ đã tồn tại") from exc

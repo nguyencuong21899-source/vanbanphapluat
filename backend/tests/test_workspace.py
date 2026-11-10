@@ -22,7 +22,7 @@ class WorkspaceTest(unittest.TestCase):
         }):
             from app.db import connection
             from app.main import app
-            from app.worker import send_reminders
+            from app.worker import record_document_reminders, send_reminders
 
             with connection() as conn:
                 self.assertIsNone(conn.execute("SELECT to_regclass('public.documents') AS name").fetchone()["name"])
@@ -81,6 +81,20 @@ class WorkspaceTest(unittest.TestCase):
                 account = client.post("/api/accounts", json={**employee, "display_name": "Nhân viên thử",
                     "email": "staff@example.com", "role": "employee"}).json()
                 today = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date().isoformat()
+                draft = client.post("/api/documents", json={
+                    "internal_code": "DT-TEST", "title": "Dự thảo kiểm thử", "document_type": "Thông tư",
+                    "legal_status": "DRAFT", "comment_deadline": today,
+                }).json()
+                record_document_reminders()
+                record_document_reminders()
+                alerts = client.get("/api/dashboard").json()["alerts"]
+                self.assertEqual(sum(a["document_id"] == draft["id"] and "Hạn góp ý" in a["message"] for a in alerts), 1)
+                self.assertEqual(client.get("/api/documents", params={"legal_status": "DRAFT"}).json()[0]["id"], draft["id"])
+                client.put("/api/documents/" + draft["id"], json={
+                    "internal_code": "DT-TEST", "title": "Dự thảo kiểm thử", "document_type": "Thông tư",
+                    "legal_status": "DRAFT", "revision": draft["updated_at"],
+                }).raise_for_status()
+                self.assertFalse(any("Hạn góp ý" in a["message"] for a in client.get("/api/dashboard").json()["alerts"]))
                 task = client.post("/api/tasks", json={"document_id": row["id"], "requirement": "Kiểm tra văn bản",
                     "assignee_id": account["id"], "internal_deadline": today})
                 self.assertEqual(task.status_code, 201, task.text)

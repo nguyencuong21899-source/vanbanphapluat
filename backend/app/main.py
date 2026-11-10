@@ -54,7 +54,16 @@ def dashboard(user: dict = Depends(current_user)):
           FROM documents WHERE archived_at IS NULL""").fetchone()
         overdue = conn.execute(f"""SELECT COUNT(*) AS count FROM implementation_plans p
           WHERE p.internal_deadline<CURRENT_DATE AND p.status<>'DONE' AND {scope}""", args).fetchone()
-        alerts = conn.execute("""SELECT a.id,a.alert_type,a.severity,a.message,a.created_at FROM alerts a
+        alerts = conn.execute("""SELECT a.id,a.document_id,a.alert_type,a.severity,a.message,a.created_at FROM alerts a
           LEFT JOIN documents d ON d.id=a.document_id
-          WHERE NOT a.is_read AND d.archived_at IS NULL ORDER BY a.created_at DESC LIMIT 10""").fetchall()
+          WHERE NOT a.is_read AND d.archived_at IS NULL
+            AND (a.reminder_key IS NULL OR (
+                split_part(a.reminder_key, ':', 3)::date >= (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
+                AND split_part(a.reminder_key, ':', 3)::date = CASE split_part(a.reminder_key, ':', 2)
+                    WHEN 'comment' THEN CASE WHEN d.legal_status='DRAFT' THEN d.comment_deadline END
+                    WHEN 'effective' THEN CASE WHEN d.legal_status IN ('PENDING_EFFECT','ACTIVE','UNVERIFIED') THEN d.effective_on END
+                    WHEN 'expiry' THEN CASE WHEN d.legal_status IN ('PENDING_EFFECT','ACTIVE','PARTIALLY_REPEALED','UNVERIFIED') THEN d.expires_on END
+                END
+            ))
+          ORDER BY a.created_at DESC LIMIT 10""").fetchall()
         return {"totals": {**totals, "overdue": overdue["count"]}, "alerts": alerts}

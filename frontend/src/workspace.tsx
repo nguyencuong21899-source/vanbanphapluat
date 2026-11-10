@@ -12,8 +12,9 @@ const fields = [
   ['comment_deadline', 'Hạn góp ý'], ['primary_domain', 'Lĩnh vực'],
 ] as const
 
-function Editor({ doc, departments, canReview, onClose, onSave }: {
+function Editor({ doc, departments, canReview, draft, onClose, onSave }: {
   doc: LegalDocument | null; departments: Department[]; canReview: boolean; onClose: () => void;
+  draft: boolean;
   onSave: (doc: LegalDocument) => void;
 }) {
   const [error, setError] = useState('')
@@ -28,7 +29,7 @@ function Editor({ doc, departments, canReview, onClose, onSave }: {
       onSave(await api<LegalDocument>(doc ? '/documents/' + doc.id : '/documents', json(doc ? 'PUT' : 'POST', {
         ...data, internal_code: data.internal_code || 'VB-' + cryptoRandom(), title: data.title || data.source_url,
         document_type: data.document_type || 'Chưa phân loại',
-        legal_status: form.get('legal_status') || doc?.legal_status || 'UNVERIFIED',
+        legal_status: form.get('legal_status') || doc?.legal_status || (draft ? 'DRAFT' : 'UNVERIFIED'),
         applicability: doc?.applicability || 'UNVERIFIED', revision: doc?.updated_at,
         departments: form.getAll('departments'), notes: form.get('notes') || null,
       })))
@@ -36,14 +37,14 @@ function Editor({ doc, departments, canReview, onClose, onSave }: {
     finally { setBusy(false) }
   }
   return <section className="panel">
-    <div className="section-title"><h2>{doc ? 'Chỉnh sửa văn bản' : 'Thêm văn bản'}</h2><button className="secondary" onClick={onClose}>Đóng</button></div>
+    <div className="section-title"><h2>{doc ? 'Chỉnh sửa văn bản' : draft ? 'Thêm dự thảo' : 'Thêm văn bản'}</h2><button className="secondary" onClick={onClose}>Đóng</button></div>
     <form onSubmit={save}>
       <div className="form-grid">{fields.map(([key, label]) => <label key={key}>{label}
         <input name={key} defaultValue={doc?.[key] || ''} required={key === 'title' && !!doc}
           maxLength={key === 'title' ? 1000 : key === 'source_url' ? 2083 : 100}
           type={key === 'source_url' ? 'url' : key.endsWith('_on') || key === 'comment_deadline' ? 'date' : 'text'} />
       </label>)}
-      {canReview && <label>Tình trạng pháp lý<select name="legal_status" defaultValue={doc?.legal_status || 'UNVERIFIED'}>
+      {canReview && <label>Tình trạng pháp lý<select name="legal_status" defaultValue={doc?.legal_status || (draft ? 'DRAFT' : 'UNVERIFIED')}>
         {Object.entries(statuses).map(([key, value]) => <option key={key} value={key}>{value}</option>)}
       </select></label>}
       <label>Phòng ban<select name="departments" multiple defaultValue={doc?.departments || []}>
@@ -60,7 +61,7 @@ function cryptoRandom() {
   return Array.from(crypto.getRandomValues(new Uint8Array(10)), value => value.toString(16).padStart(2, '0')).join('')
 }
 
-function Batch({ onSaved }: { onSaved: () => void }) {
+function Batch({ onSaved, draft }: { onSaved: () => void; draft: boolean }) {
   const [input, setInput] = useState('')
   const [result, setResult] = useState('')
   const [busy, setBusy] = useState(false)
@@ -74,7 +75,7 @@ function Batch({ onSaved }: { onSaved: () => void }) {
       try {
         if (!sourceLink(link)) throw new Error('Đường link phải bắt đầu bằng HTTP hoặc HTTPS')
         await api('/documents', json('POST', { internal_code: 'VB-' + cryptoRandom(), title: link.slice(0, 1000),
-          document_type: 'Chưa phân loại', source_url: link }))
+          document_type: 'Chưa phân loại', source_url: link, legal_status: draft ? 'DRAFT' : 'UNVERIFIED' }))
       } catch (error) { failures.push(link); messages.push(link + ' — ' + (error as Error).message) }
     }
     setBusy(false)
@@ -227,7 +228,7 @@ export function Workspace({ user, roleLabel, onLogout }: { user: User; roleLabel
     {catalog && <>
       <section className="panel"><div className="section-title"><h2>{archived ? 'Văn bản đã lưu trữ' : 'Danh mục văn bản'}</h2>
         {canEdit && !archived && <div className="actions"><button className="secondary" onClick={() => { setBatch(!batch); setEditor(null) }}>Nhập nhiều link</button>
-          <button onClick={() => { setEditor('new'); setBatch(false) }}>+ Thêm văn bản</button></div>}</div>
+          <button onClick={() => { setEditor('new'); setBatch(false) }}>{page === 'drafts' ? '+ Thêm dự thảo' : '+ Thêm văn bản'}</button></div>}</div>
         <div className="filters"><input aria-label="Tìm kiếm" placeholder="Tìm tên, số hiệu hoặc đường link…" value={query} onChange={e => setQuery(e.target.value)} />
           <select aria-label="Trạng thái" value={filter} onChange={e => setFilter(e.target.value)}><option value="">Mọi trạng thái</option>
             {Object.entries(statuses).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select>
@@ -240,9 +241,9 @@ export function Workspace({ user, roleLabel, onLogout }: { user: User; roleLabel
               <small>{row.reference_number || row.internal_code}</small></td><td><span className="badge">{statuses[row.legal_status]}</span></td>
               <td>{dateLabel(row.effective_on)}</td><td>{row.has_file ? 'Có tệp' : row.source_url ? 'Đường link' : '—'}</td></tr>)}</tbody></table></div>}
       </section>
-      {batch && <Batch onSaved={refresh} />}
+      {batch && <Batch onSaved={refresh} draft={page === 'drafts'} />}
       {editor && <Editor key={editor === 'new' ? 'new' : editor.id} doc={editor === 'new' ? null : editor}
-        departments={departments} canReview={canReview} onClose={() => setEditor(null)}
+        departments={departments} canReview={canReview} draft={page === 'drafts'} onClose={() => setEditor(null)}
         onSave={saved => { setEditor(null); setSelected(saved.id); refresh() }} />}
       {doc && !editor && <><div className="actions">
         {canEdit && !archived && <button className="secondary" onClick={() => setEditor(doc)}>Sửa văn bản</button>}
@@ -257,13 +258,13 @@ export function Workspace({ user, roleLabel, onLogout }: { user: User; roleLabel
     </>}
     {page === 'tasks' && <TaskList canAssign={canReview} docs={docs} />}
     {page === 'admin' && <Administration departments={departments} refresh={refresh} />}
-    {page === 'overview' && <Overview />}
+    {page === 'overview' && <Overview openDocument={id => { navigate('documents'); setQuery(''); setSelected(id) }} />}
     </main>
   </div>
 }
 
-function Overview() {
-  const [data, setData] = useState<{ totals: Record<string, number>; alerts: { id: string; message: string }[] }>()
+function Overview({ openDocument }: { openDocument: (id: string) => void }) {
+  const [data, setData] = useState<{ totals: Record<string, number>; alerts: { id: string; document_id: string | null; message: string }[] }>()
   const [error, setError] = useState('')
   useEffect(() => { api<NonNullable<typeof data>>('/dashboard').then(setData).catch(error => setError(error.message)) }, [])
   const labels = { total_documents: 'Tổng văn bản', new_documents: 'Văn bản mới trong 7 ngày',
@@ -272,5 +273,7 @@ function Overview() {
   if (!data) return <p>Đang tải tổng quan…</p>
   return <><div className="stats">{Object.entries(labels).map(([key, label]) => <article className="panel" key={key}>
     <strong>{data.totals[key]}</strong><span>{label}</span></article>)}</div>
-    <section className="panel"><h2>Thông báo</h2>{data.alerts.length ? data.alerts.map(item => <p key={item.id}>{item.message}</p>) : <p>Chưa có thông báo.</p>}</section></>
+    <section className="panel"><h2>Thông báo</h2>{data.alerts.length ? data.alerts.map(item => <p key={item.id}>
+      {item.document_id ? <button className="text-button" onClick={() => openDocument(item.document_id!)}>{item.message}</button> : item.message}
+    </p>) : <p>Chưa có thông báo.</p>}</section></>
 }
