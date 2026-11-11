@@ -112,6 +112,9 @@ class WorkspaceTest(unittest.TestCase):
                 self.assertEqual(client.patch("/api/tasks/" + task.json()["id"], json={"status": "DONE"}).status_code, 200)
                 self.assertEqual(client.post("/api/auth/logout").status_code, 204)
                 self.assertEqual(client.get("/api/auth/me").status_code, 401)
+                from legal_workbench_checks import check_legal_workbench
+                employee_token = client.post("/api/auth/login", json=employee).json()["token"]
+                check_legal_workbench(self, client, token, employee_token, account)
 
             with TestClient(app) as restarted:
                 restarted.headers["Authorization"] = f"Bearer {token}"

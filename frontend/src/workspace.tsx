@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, dateLabel, json, sourceLink, statuses, type Department, type LegalDocument, type User } from './api'
 import { Administration, TaskList } from './management'
+import { LegalWorkbench, type LegalSection } from './legal'
 
-type Page = 'documents' | 'drafts' | 'analysis' | 'tasks' | 'overview' | 'admin' | 'trash'
+type Page = LegalSection | 'documents' | 'drafts' | 'analysis' | 'tasks' | 'overview' | 'admin' | 'trash'
 type Analysis = { id: string; result: string; created_at: string; provider: string; current_file: boolean }
 type Audit = { actor: string; action: string; created_at: string; detail: Record<string, unknown> }
 const fields = [
@@ -173,11 +174,12 @@ const auditLabels: Record<string, string> = {
   DOCUMENT_RESTORED: 'Khôi phục', SOURCE_FILE_UPLOADED: 'Đính kèm tệp', AI_ANALYSIS_CREATED: 'Phân tích AI',
   DOCUMENT_APPROVED: 'Đã duyệt', DOCUMENT_REJECTED: 'Yêu cầu sửa',
 }
-const nav: [Page, string][] = [['documents', 'Văn bản pháp luật'], ['drafts', 'Văn bản dự thảo'],
+const nav: [Page, string][] = [['workbench', 'Bàn làm việc pháp lý'], ['library', 'Kho tài liệu nội bộ'],
+  ['knowledge', 'Tri thức đã duyệt'], ['obligations', 'Nghĩa vụ và bằng chứng'], ['documents', 'Văn bản pháp luật'], ['drafts', 'Văn bản dự thảo'],
   ['analysis', 'AI phân tích'], ['tasks', 'Công việc và nhắc hạn'], ['overview', 'Tổng quan'], ['trash', 'Thùng rác']]
 
 export function Workspace({ user, roleLabel, onLogout }: { user: User; roleLabel: string; onLogout: () => Promise<void> }) {
-  const [page, setPage] = useState<Page>('documents')
+  const [page, setPage] = useState<Page>(new URLSearchParams(location.search).has('document') ? 'documents' : 'workbench')
   const [docs, setDocs] = useState<LegalDocument[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [selected, setSelected] = useState<string | null>(new URLSearchParams(location.search).get('document'))
@@ -222,7 +224,9 @@ export function Workspace({ user, roleLabel, onLogout }: { user: User; roleLabel
       <button className="secondary" onClick={() => navigate('overview')}>Thông báo</button></header>
     {catalog && !archived && <section className="agents" aria-label="Agent hỗ trợ">
       <button onClick={() => navigate('analysis')}><strong>Phân tích văn bản</strong><small>{aiEnabled ? 'Gemini · Chọn văn bản có tệp' : 'Gemini chưa cấu hình'}</small></button>
-      {['Theo dõi nguồn', 'So sánh và góp ý', 'Hỏi đáp kho văn bản'].map(label => <div key={label}><strong>{label}</strong><small>Chưa triển khai</small></div>)}
+      <button onClick={() => navigate('workbench')}><strong>Rà soát và soạn thảo</strong><small>Mở hồ sơ với nhiều nguồn</small></button>
+      <button onClick={() => navigate('knowledge')}><strong>Tri thức đã duyệt</strong><small>Kết quả theo quyền truy cập</small></button>
+      <div><strong>Outlook / theo dõi nguồn</strong><small>Chưa kết nối nguồn tự động</small></div>
     </section>}
     {error && <p className="error" role="alert">{error} <button className="secondary" onClick={refresh}>Thử lại</button></p>}
     {catalog && <>
@@ -256,6 +260,9 @@ export function Workspace({ user, roleLabel, onLogout }: { user: User; roleLabel
         <button className="secondary" onClick={() => setSelected(null)}>Đóng chi tiết</button>
       </div><Detail key={doc.id} doc={doc} canEdit={canEdit} canReview={canReview} aiEnabled={aiEnabled} showAI={page === 'analysis'} refresh={refresh} /></>}
     </>}
+    {['workbench', 'library', 'knowledge', 'obligations'].includes(page) &&
+      <LegalWorkbench section={page as LegalSection} user={user} departments={departments} documents={docs}
+        aiEnabled={aiEnabled} onSection={navigate} openDocuments={() => navigate('documents')} />}
     {page === 'tasks' && <TaskList canAssign={canReview} docs={docs} />}
     {page === 'admin' && <Administration departments={departments} refresh={refresh} />}
     {page === 'overview' && <Overview openDocument={id => { navigate('documents'); setQuery(''); setSelected(id) }} />}

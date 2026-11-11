@@ -33,7 +33,7 @@ export const taskStatuses: Record<string, string> = {
   OPEN: 'Chưa làm', IN_PROGRESS: 'Đang làm', DONE: 'Hoàn thành',
 }
 
-export type User = { id: string; username: string; display_name: string; role: string }
+export type User = { id: string; username: string; display_name: string; role: string; department_id: string | null }
 export type Department = { id: string; name: string; description: string; keywords: string }
 export type LegalDocument = {
   id: string; internal_code: string; title: string; document_type: string; reference_number: string | null;

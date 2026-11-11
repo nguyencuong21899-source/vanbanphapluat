@@ -1,6 +1,8 @@
 # Traphaco CNC – AI Legal Monitoring System
 
-Hệ thống nội bộ giám sát văn bản pháp luật và quản lý tuân thủ. Trang chính là danh mục văn bản. Tổng quan và thông báo nằm ở mục riêng.
+Hệ thống nội bộ quản lý công việc pháp lý và tuân thủ. Trang chính là **Bàn làm việc pháp lý**: hồ sơ vụ việc, Agent phân tích/rà soát/soạn thảo, kho tài liệu, phê duyệt và nghĩa vụ có bằng chứng. Danh mục VBPL, dự thảo và thông báo vẫn ở các mục riêng.
+
+Xem [hướng dẫn chức năng và phạm vi triển khai](docs/LEGAL_WORKBENCH.md) để dùng các quy trình theo định hướng tài liệu LEXcentra. Bắt đầu bằng việc chọn Agent, tạo hồ sơ, thêm nguồn, tạo báo cáo rồi gửi Pháp chế duyệt. Các Agent dùng Gemini khi đã cấu hình; có thể biên soạn báo cáo thủ công khi chưa kết nối AI.
 
 ## Sử dụng
 
@@ -12,7 +14,7 @@ Hệ thống nội bộ giám sát văn bản pháp luật và quản lý tuân 
 
 Với dự thảo nhận từ cổng cơ quan, thư mời hoặc Zalo, vào **Văn bản dự thảo → Thêm dự thảo**, nhập hạn góp ý nếu đã biết, rồi mở bản vừa lưu để đính kèm tài liệu. Mục **Thông báo** báo khi có bản ghi mới và nhắc các mốc góp ý, hiệu lực hoặc hết hiệu lực đã nhập theo `REMINDER_DAYS`. Nhắc mốc hiển thị trong ứng dụng và liên kết đến văn bản. Trạng thái hiệu lực do người phụ trách xác minh và cập nhật.
 
-Danh mục chung dành cho người dùng đã đăng nhập. Kho SOP hạn chế theo phòng ban, theo dõi nguồn tự động, AI góp ý dự thảo và Microsoft 365 thuộc giai đoạn sau.
+Danh mục VBPL chung dành cho người dùng đã đăng nhập. SOP/hợp đồng hạn chế truy cập được lưu trong hồ sơ ở Bàn làm việc pháp lý. Agent soạn thảo và góp ý làm việc trên nguồn được cung cấp. Theo dõi nguồn bên ngoài tự động và Microsoft 365 chưa được kết nối.
 
 ## Chạy bằng Docker Compose
 

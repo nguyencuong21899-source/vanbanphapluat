@@ -10,4 +10,5 @@ __pycache__/
 node_modules/
 frontend/dist/
 .test-deps/
+tmp/
 

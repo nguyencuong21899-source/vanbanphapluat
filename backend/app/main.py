@@ -4,7 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
-from . import accounts, analysis, documents, tasks
+from . import accounts, analysis, documents, tasks, legal
 from .accounts import current_user
 from .db import connection
 from .migrate import migrate
@@ -17,7 +17,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Traphaco CNC – AI Legal Monitoring System", version="0.2.0", lifespan=lifespan)
-for router in (accounts.router, documents.router, tasks.router, analysis.router):
+for router in (accounts.router, documents.router, tasks.router, analysis.router, legal.router):
     app.include_router(router)
 
 
